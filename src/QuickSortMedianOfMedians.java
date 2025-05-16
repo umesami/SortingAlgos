@@ -1,79 +1,90 @@
-import java.util.*;
+//Algorithm 3: QuickSort via Median of Medians approach
 public class QuickSortMedianOfMedians {
 
-    public static void sort(int[] arr) {
-        quickSort(arr, 0, arr.length - 1);
+    public static int select(int[] A, int k) {
+        return medianOfMedians(A, 0, A.length - 1, k);
     }
 
-    private static void quickSort(int[] arr, int low, int high) {
-        if (low < high) {
-            int pivotIndex = partition(arr, low, high);
-            quickSort(arr, low, pivotIndex - 1);
-            quickSort(arr, pivotIndex + 1, high);
-        }
-    }
-
-    private static int partition(int[] arr, int low, int high) {
-        int pivotValue = select(arr, low, high, (high - low) / 2 + 1); // kth smallest (median)
-        int pivotIndex = partitionAroundPivot(arr, low, high, pivotValue);
-        return pivotIndex;
-    }
-
-    private static int partitionAroundPivot(int[] arr, int low, int high, int pivotValue) {
-        // Move pivot to end
-        int pivotIndex = low;
-        for (int i = low; i <= high; i++) {
-            if (arr[i] == pivotValue) {
-                pivotIndex = i;
-                break;
-            }
-        }
-        swap(arr, pivotIndex, high);
-
-        int storeIndex = low;
-        for (int i = low; i < high; i++) {
-            if (arr[i] < pivotValue) {
-                swap(arr, storeIndex, i);
-                storeIndex++;
-            }
+    private static int medianOfMedians(int[] A, int left, int right, int k) {
+        //Base case: if the array has 5 or fewer elements, sort and return the k-th element
+        if (right - left + 1 <= 5) {
+            selectMedian(A, left, right);
+            return A[left + k - 1];
         }
 
-        swap(arr, storeIndex, high); // Move pivot to its final place
-        return storeIndex;
-    }
-
-    // Median of Medians: select the kth smallest element
-    private static int select(int[] arr, int low, int high, int k) {
-        if (high - low < 5) {
-            int[] temp = Arrays.copyOfRange(arr, low, high + 1);
-            Arrays.sort(temp);
-            return temp[k - 1];
-        }
-
+        //Step 1: Partition the array into groups of 5 elements
         int numMedians = 0;
-        for (int i = low; i <= high; i += 5) {
-            int subHigh = Math.min(i + 4, high);
-            int[] group = Arrays.copyOfRange(arr, i, subHigh + 1);
-            Arrays.sort(group);
-            arr[low + numMedians] = group[group.length / 2];
+        for (int i = left; i <= right; i += 5) {
+            int subRight = Math.min(i + 4, right);
+            selectMedian(A, i, subRight); // Sort each group of 5
+            int medianIndex = i + (subRight - i) / 2;
+            swap(A, left + numMedians, medianIndex); // Move the median to the left
             numMedians++;
         }
 
-        // Recursively find median of the medians
-        int medianOfMedians = select(arr, low, low + numMedians - 1, numMedians / 2 + 1);
-        return medianOfMedians;
+        //Step 2: Find the median of medians recursively
+        int medianOfMedians = medianOfMedians(A, left, left + numMedians - 1, (numMedians + 1) / 2);
+
+        //Step 3: Partition the array around the median of medians
+        int pivotIndex = partitionAroundPivot(A, left, right, medianOfMedians);
+        int order = pivotIndex - left + 1;
+
+        //Step 4: Recursively search for the k-th smallest element
+        if (k == order) {
+            return A[pivotIndex];
+        } else if (k < order) {
+            return medianOfMedians(A, left, pivotIndex - 1, k);
+        } else {
+            return medianOfMedians(A, pivotIndex + 1, right, k - order);
+        }
     }
 
-    private static void swap(int[] arr, int i, int j) {
-        if (i == j) return;
-        int temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-    }
-    public static void printArr(int[] arr) {
-        for (int val : arr) {
-            System.out.print(val + " ");
+    //Use insertion sort to sort the group and find the median
+    private static void selectMedian(int[] A, int left, int right) {
+        // Insertion sort for a small array of 5 elements
+        for (int i = left + 1; i <= right; i++) {
+            int key = A[i];
+            int j = i - 1;
+
+            //Move elements of A[left..i-1] that are greater than key to one position ahead of their current position
+            while (j >= left && A[j] > key) {
+                A[j + 1] = A[j];
+                j--;
+            }
+            A[j + 1] = key;
         }
-        System.out.println();
+    }
+
+    //Partition around the pivot, which is the median of medians
+    private static int partitionAroundPivot(int[] A, int left, int right, int pivotValue) {
+        for (int i = left; i <= right; i++) {
+            if (A[i] == pivotValue) {
+                swap(A, i, right); // Swap pivot with rightmost element
+                break;
+            }
+        }
+        return partition(A, left, right);
+    }
+
+    private static void swap(int[] A, int i, int j) {
+        int temp = A[i];
+        A[i] = A[j];
+        A[j] = temp;
+    }
+
+    //Standard partitioning
+    private static int partition(int[] A, int left, int right) {
+        int pivot = A[right];
+        int i = left - 1;
+
+        for (int j = left; j < right; j++) {
+            if (A[j] <= pivot) {
+                i++;
+                swap(A, i, j);
+            }
+        }
+
+        swap(A, i + 1, right);
+        return i + 1;
     }
 }
